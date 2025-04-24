@@ -1,4 +1,5 @@
 ekedc/*
+ekedp/*
 *.png binary    
 *.jpg binary
 *.jpeg binary
@@ -10,3 +11,6 @@ ekedc/*
 
 
 *.csv
+*.cypython
+modelling/__pycache__/*
+*.__pycache__
