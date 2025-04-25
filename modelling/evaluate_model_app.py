@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from glob import glob
-from evaluate_model import evaluate_pipeline
+from evaluate_model import evaluate_pipeline, parse_model_filename
 
 st.title("📊 Evaluate Trained Models")
 
@@ -19,16 +19,24 @@ def main():
     model_choice = st.selectbox("Select a Model to Evaluate", all_models)
     is_dl = model_choice.endswith(".h5")
 
-    # Infer task type from filename
-    target = os.path.basename(model_choice).split("_")[0]
+    # ✅ Use unified filename parser
+    target, algorithm, model_type = parse_model_filename(model_choice)
+
     if any(x in model_choice for x in ["tamper", "fault", "band"]):
         task_type = "classification"
     else:
         task_type = "regression"
 
+    st.markdown(f"**Target:** `{target}` | **Algorithm:** `{algorithm}` | **Model Type:** `{model_type}`")
+    # ✅ Sample size input
+    sample_size = st.number_input(
+        "Limit rows for evaluation (0 = full data)",
+        min_value=0, max_value=50000, value=5000, step=500
+    )
+
     if st.button("📈 Run Evaluation"):
         with st.spinner("Running evaluation..."):
-            evaluate_pipeline(model_path=model_choice, target=target, task_type=task_type, is_dl=is_dl)
+            evaluate_pipeline(model_path=model_choice, target=target, task_type=task_type, is_dl=is_dl, sample_size=sample_size if sample_size > 0 else None)
         st.success("✅ Evaluation complete!")
 
         # Show Plots

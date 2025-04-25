@@ -14,3 +14,5 @@ ekedp/*
 *.cypython
 modelling/__pycache__/*
 *.__pycache__
+modelling/models/*
+modelling/plots/*

@@ -17,10 +17,15 @@ def main():
 
     df = pd.read_csv(metrics_file)
 
-    # Display selection
-    df["display_name"] = df["target"] + " | " + df["model_type"]
-    selected = st.multiselect("Select Models to Compare", df["display_name"].tolist(), default=df["display_name"].tolist()[:2])
+    # Sanitize display names to avoid recursion errors
+    df["display_name"] = df.apply(lambda row: f"{row['target']} | {row['model_type']} | {row['model_file']}", axis=1)
+    df = df.drop_duplicates(subset=["display_name"])  # Avoid recursive duplicates
 
+    selected = st.multiselect(
+        "Select Models to Compare",
+        df["display_name"].tolist(),
+        default=df["display_name"].tolist()[:2]
+    )
     if not selected or len(selected) < 2:
         st.info("Please select at least 2 models.")
         st.stop()
@@ -69,13 +74,16 @@ def main():
         st.markdown("### 🧾 Confusion Matrices")
         cols = st.columns(len(selected))
         for i, name in enumerate(selected):
-            base = name.split(" | ")[0]
+            parts = name.split(" | ")
+            if len(parts) < 2:
+                st.warning(f"Invalid model display name: {name}")
+                continue
+            base = parts[0]
             plot_path = f"plots/{base}_conf_matrix_eval.png"
             if os.path.exists(plot_path):
                 cols[i].image(Image.open(plot_path), caption=base)
             else:
                 cols[i].warning(f"No plot found for {base}")
-
     # ------------------ Downloadable Table ------------------
     csv = compare_df.to_csv(index=False).encode("utf-8")
     st.download_button("📥 Download Comparison CSV", csv, "model_comparison.csv", "text/csv")

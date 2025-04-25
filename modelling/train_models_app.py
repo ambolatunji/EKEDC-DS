@@ -26,7 +26,7 @@ def main():
 
     # Algorithm options (consistent with train_model.py)
     algorithm_options = {
-        "ml": ["logistic", "randomforest", "xgboost", "ensemble"],
+        "ml": ["logistic", "randomforest", "xgboost", "ensemble", "linear"],
         "dl": ["mlp"], # Only MLP for now
         # RL is handled via NotImplementedError in train_pipeline now
     }
@@ -35,7 +35,7 @@ def main():
     col1, col2 = st.columns(2)
 
     with col1:
-        task_name = st.selectbox("🎯 Choose a Task", list(task_options.keys()))
+        task_name = st.selectbox("🎯 Choose a Task to be Predicted", list(task_options.keys()))
         # Derive target and task_type from selection
         target, task_type = task_options[task_name]
 
@@ -89,11 +89,17 @@ def main():
         st.dataframe(corr_df)
 
         # User selection
+        # Sort top 6 features by absolute correlation
+        top_k = 6
+        corr_df["abs_corr"] = corr_df["Correlation with Target"].abs()
+        top_features = corr_df.sort_values(by="abs_corr", ascending=False)["Feature"].tolist()[:top_k]
+
         selected_features = st.multiselect(
             "✅ Select Features to Train On",
             options=candidate_features.columns.tolist(),
-            default=candidate_features.columns.tolist()
+            default=top_features
         )
+
         st.markdown(f"**Selected Features:** `{', '.join(selected_features)}`")
 
     # ------------------- Training Trigger & History Display -------------------
@@ -101,9 +107,13 @@ def main():
 
     with train_col:
         st.markdown("---") # Separator line
+        def log_to_ui(msg):
+            st.markdown(f"```\n{msg}\n```")
+            st.markdown("### 🧠 Training Progress")
+
         # Disable button if algorithm selection failed
         train_button_disabled = algorithm is None
-
+        
         if st.button("🚀 Train Model", disabled=train_button_disabled, type="primary"):
             st.info("Button clicked! Initiating training process...") # Immediate feedback
             if not selected_features:
@@ -119,7 +129,8 @@ def main():
                             model_category=model_category,
                             algorithm=algorithm,
                             tune=tune,
-                            selected_features=selected_features
+                            selected_features=selected_features,
+                            log_fn=log_to_ui # Pass the logging function to train_pipeline
                         )
 
                         # Display success or error message based on the outcome

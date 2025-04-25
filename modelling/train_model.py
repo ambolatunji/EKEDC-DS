@@ -4,6 +4,11 @@ import pickle
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor, VotingRegressor                
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.model_selection import GridSearchCV
+from xgboost import XGBRegressor
 from sklearn.metrics import (
     classification_report, mean_squared_error, mean_absolute_error, r2_score,
     accuracy_score, confusion_matrix, roc_curve, auc
@@ -222,11 +227,14 @@ def save_model(model, name, is_dl=False):
     return True
 
 # --- Main Training Pipeline ---
-def train_pipeline(target, task_type='classification', model_category='ml', algorithm='xgboost', tune=False, selected_features=None):
+def train_pipeline(target, task_type='classification', model_category='ml', algorithm='xgboost', tune=False, selected_features=None, log_fn=print):
     """Orchestrates the full training, evaluation, and saving process."""
+    from datetime import datetime
     start_time = datetime.now()
-    model_name_base = f"{target}_{algorithm}_{model_category}"
-    print(f"\n🚀 [{start_time.strftime('%H:%M:%S')}] Starting training for: {target} | Task: {task_type} | Category: {model_category} | Algo: {algorithm} | Tuning: {tune}")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    tune_flag = "tuned" if tune else "default"
+    model_name_base = f"{target}_{algorithm}_{model_category}_{tune_flag}_{timestamp}"
+    log_fn(f"\n🚀 [{start_time.strftime('%H:%M:%S')}] Starting training for: {target} | Task: {task_type} | Category: {model_category} | Algo: {algorithm} | Tuning: {tune}")
 
     score = None
     model = None
@@ -235,33 +243,81 @@ def train_pipeline(target, task_type='classification', model_category='ml', algo
 
     try:
         # 1. Load and Prepare Data
-        print("💾 Loading data...")
+        log_fn("💾 Loading data...")
         df = load_data() # Assumes load_data finds the file
-        print("⚙️ Preparing data...")
-        X_train, X_test, y_train, y_test, scaler = prepare_data(df, target, task_type)
-        print(f"Data Shapes: X_train={X_train.shape}, X_test={X_test.shape}, y_train={y_train.shape}, y_test={y_test.shape}")
+        log_fn("⚙️ Preparing data...")
+        X_train, X_test, y_train, y_test, scaler = prepare_data(
+            df, target, task_type=task_type, selected_features=selected_features
+        )
+
+        log_fn(f"Data Shapes: X_train={X_train.shape}, X_test={X_test.shape}, y_train={y_train.shape}, y_test={y_test.shape}")
 
         input_dim = X_train.shape[1]
 
         # 2. Train Model
-        print(f"🧠 Training model ({model_category.upper()} - {algorithm})...")
+        log_fn(f"🧠 Training model ({model_category.upper()} - {algorithm})...")
         if model_category == 'ml':
-            model = train_ml_model(X_train, y_train, model_type=algorithm, tune=tune)
-            y_pred = model.predict(X_test)
-            y_prob = model.predict_proba(X_test)[:, 1] if hasattr(model, "predict_proba") and task_type == 'classification' else None
+            if task_type == 'classification':
+                model = train_ml_model(X_train, y_train, model_type=algorithm, tune=tune)
+                y_pred = model.predict(X_test)
+                y_prob = model.predict_proba(X_test)[:, 1] if hasattr(model, "predict_proba") else None
+            elif task_type == 'regression':
+                log_fn(f"🧠 Training model (Regression - {algorithm})...")
+
+                if algorithm == 'randomforest':
+                    base_model = RandomForestRegressor()
+                    if tune:
+                        log_fn("⏳ Tuning RandomForestRegressor...")
+                        param_grid = {"max_depth": [5, 10, 15]}
+                        model = GridSearchCV(base_model, param_grid, cv=3)
+                        model.fit(X_train, y_train)
+                        log_fn(f"Best Params: {model.best_params_}")
+                    else:
+                        model = base_model.fit(X_train, y_train)
+
+                elif algorithm == 'xgboost':
+                    base_model = XGBRegressor()
+                    if tune:
+                        log_fn("⏳ Tuning XGBRegressor...")
+                        param_grid = {"max_depth": [3, 6, 10]}
+                        model = GridSearchCV(base_model, param_grid, cv=3)
+                        model.fit(X_train, y_train)
+                        log_fn(f"Best Params: {model.best_params_}")
+                    else:
+                        model = base_model.fit(X_train, y_train)
+
+                elif algorithm == 'linear':
+                    model = LinearRegression().fit(X_train, y_train)
+
+                elif algorithm == 'ensemble':
+                    log_fn("🤝 Building ensemble regressor...")
+                    model1 = LinearRegression()
+                    model2 = RandomForestRegressor()
+                    model3 = XGBRegressor()
+                    model = VotingRegressor(estimators=[
+                        ("lr", model1),
+                        ("rf", model2),
+                        ("xgb", model3)
+                    ])
+                    model.fit(X_train, y_train)
+                else:
+                    raise ValueError(f"Unsupported regression algorithm: {algorithm}")
+
+                y_pred = model.predict(X_test)
+                y_prob = None # No probabilities for regression
 
         elif model_category == 'dl':
             if not TF_AVAILABLE:
                 raise ImportError("Cannot train DL model: TensorFlow/Keras not installed.")
             model = build_dense_model(input_dim, task_type)
-            print(model.summary()) # Print model summary
+            log_fn(model.summary()) # Print model summary
             history = model.fit(X_train, y_train,
                                 epochs=20, # Increased epochs
                                 batch_size=64,
                                 validation_split=0.1, # Use validation data
                                 verbose=0, # Set to 1 or 2 for more verbose training output
                                 callbacks=[]) # Add callbacks like EarlyStopping if desired
-            print("DL Model training finished.")
+            log_fn("DL Model training finished.")
             y_pred_dl = model.predict(X_test)
             if task_type == 'classification':
                 y_prob = y_pred_dl.flatten()
@@ -278,13 +334,13 @@ def train_pipeline(target, task_type='classification', model_category='ml', algo
             raise ValueError(f"Unsupported model category: {model_category}")
 
         # 3. Evaluate Model
-        print("📊 Evaluating model...")
+        log_fn("📊 Evaluating model...")
         if task_type == 'classification':
             report_str = classification_report(y_test, y_pred)
-            print("Classification Report:\n", report_str)
+            log_fn("Classification Report:\n", report_str)
             acc = accuracy_score(y_test, y_pred)
             score = auc(roc_curve(y_test, y_prob)[0], roc_curve(y_test, y_prob)[1]) if y_prob is not None else acc # Use AUC if available, else Accuracy
-            print(f"Score (AUC/Accuracy): {score:.4f}")
+            log_fn(f"Score (AUC/Accuracy): {score:.4f}")
             plot_evaluation(y_test, y_pred, y_prob, model_name_base, task_type)
 
         elif task_type == 'regression':
@@ -292,20 +348,24 @@ def train_pipeline(target, task_type='classification', model_category='ml', algo
             mse = mean_squared_error(y_test, y_pred)
             r2 = r2_score(y_test, y_pred)
             score = r2 # Use R-squared as the score for regression
-            print(f"MAE: {mae:.4f}")
-            print(f"MSE: {mse:.4f}")
-            print(f"R-squared: {r2:.4f}")
+            log_fn(f"MAE: {mae:.4f}")
+            log_fn(f"MSE: {mse:.4f}")
+            log_fn(f"R-squared: {r2:.4f}")
             plot_evaluation(y_test, y_pred, None, model_name_base, task_type)
+        feature_log_path = f"{MODEL_DIR}/{model_name_base}_features.txt"
+        with open(feature_log_path, "w") as f:
+            f.write("\n".join(selected_features or X_train.columns.tolist()))
+        log_fn(f"Features used for training saved to {feature_log_path}")
 
         # 4. Save Model
-        print("💾 Saving model...")
+        log_fn("💾 Saving model...")
         saved = save_model(model, model_name_base, is_dl=(model_category == 'dl'))
         if not saved:
              raise RuntimeError("Failed to save the model.")
 
         status = 'completed'
         final_message = f"✅ Successfully trained and evaluated model: {model_name_base}"
-        print(final_message)
+        log_fn(final_message)
 
 
     except FileNotFoundError as e:
@@ -329,7 +389,7 @@ def train_pipeline(target, task_type='classification', model_category='ml', algo
         # 5. Log Outcome (always happens)
         end_time = datetime.now()
         duration = end_time - start_time
-        print(f"⏱️ Training duration: {duration}")
+        log_fn(f"⏱️ Training duration: {duration}")
         if status != 'skipped': # Don't log skipped runs unless desired
             log_training_event(target, algorithm, model_category.upper(), status, score, error_message)
 
@@ -337,7 +397,6 @@ def train_pipeline(target, task_type='classification', model_category='ml', algo
     success = (status == 'completed')
     message_out = error_message if not success and status != 'skipped' else final_message if success else "Training skipped."
     return success, message_out
-
 
 # --- Main execution block (for direct script running) ---
 if __name__ == "__main__":

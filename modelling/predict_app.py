@@ -26,6 +26,16 @@ def main():
     model_path = st.selectbox("Select a Model", available_models)
     is_dl = model_path.endswith(".h5")
 
+    # Load selected features used during training
+    feature_file = model_path.replace(".pkl", "_features.txt").replace(".h5", "_features.txt")
+    default_features = []
+    if os.path.exists(feature_file):
+        with open(feature_file, "r") as f:
+            default_features = [line.strip() for line in f.readlines()]
+    else:
+        st.error("⚠️ Could not find features file for the selected model.")
+        st.stop()
+
     @st.cache_resource
     def load_model(path, is_dl=False):
         return load_dl_model(path) if is_dl else pickle.load(open(path, "rb"))
@@ -34,11 +44,6 @@ def main():
 
     # ------------------ Inferred Schema ------------------
     # Simulate or extract known schema
-    default_features = [
-        "energy_consumed_kwh_sum", "expected_energy_kwh_sum", "total_vended_amount_sum",
-        "revenue_loss_sum", "fault_flag_sum", "tamper_flag_sum",
-        "tariff_per_kwh_mean", "power_factor_mean", "customer_risk_score_mean"
-    ]
 
     st.markdown("### Feature Schema Inference")
     st.code(", ".join(default_features), language="python")
@@ -111,7 +116,7 @@ def main():
         else:
             log_df.to_csv(log_file, index=False)
         
-    log_prediction_event(model_path, num_predictions=1, input_file="manual")
+    #log_prediction_event(model_path, num_predictions=1, input_file="manual")
     # or
     log_prediction_event(model_path, num_predictions=len(input_df), input_file=uploaded_file.name)
 
