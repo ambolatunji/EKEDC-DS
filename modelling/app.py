@@ -32,7 +32,7 @@ st.markdown('<p class="sub-header">An intelligent dashboard for data-driven mete
 # ------------------ Define Routes ------------------
 def get_routes():
     return {
-        "🏠 Home": None,
+        "🏠 Home": ("home_app", "main"),
         "📁 Data Preparation": ("data_preparation_app", "main"),
         "🧠 Train Models": ("train_models_app", "main"),
         "📊 Evaluate Models": ("evaluate_model_app", "main"),
@@ -46,7 +46,7 @@ with st.sidebar:
     selected = option_menu(
         menu_title="EKEDC ML Suite",
         options=list(get_routes().keys()),
-        icons=["house", "upload", "activity", "bar-chart", "search", "trophy", "lock"],
+        #icons=["house", "upload", "activity", "bar-chart", "search", "trophy", "lock"],
         default_index=0
     )
 

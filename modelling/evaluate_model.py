@@ -23,11 +23,11 @@ metrics_log = []
 def parse_model_filename(filename):
     filename = os.path.basename(filename).replace(".pkl", "").replace(".h5", "")
     parts = filename.split("_")
-    known_algos = ["logistic", "randomforest", "xgboost", "ensemble", "mlp"]
+    known_algos = ["logistic", "randomforest", "xgboost", "ensemble", "mlp", "linear"]
     known_types = ["ml", "dl"]
     model_type = parts[-1] if parts[-1] in known_types else "ml"
     algorithm = parts[-2] if parts[-2] in known_algos else "unknown"
-    target = "_".join(parts[:-2])
+    target = "_".join(parts[:-3])
     return target, algorithm, model_type
 
 def load_model(model_path, is_dl=False):
@@ -74,6 +74,16 @@ def evaluate_classification(model, X_test, y_test, target_name, model_path, is_d
     plt.savefig(f"{PLOTS_DIR}/{target_name}_roc_eval.png")
     plt.close()
 
+    # Risk Distribution
+    plt.hist(y_prob, bins=30, color="crimson", alpha=0.7)
+    plt.axvline(0.8, color="orange", linestyle="--", label="High Risk >80%")
+    plt.xlabel("Predicted Risk Score")
+    plt.ylabel("Meter Count")
+    plt.title(f"Risk Score Distribution: {target_name}")
+    plt.legend()
+    plt.savefig(f"{PLOTS_DIR}/{target_name}_risk_distribution.png")
+    plt.close()
+
 def evaluate_regression(model, X_test, y_test, target_name, model_path, is_dl=False):
     y_pred = model.predict(X_test, batch_size=1024).flatten() if is_dl else model.predict(X_test)
 
@@ -101,14 +111,15 @@ def evaluate_regression(model, X_test, y_test, target_name, model_path, is_dl=Fa
     plt.close()
 
 def evaluate_pipeline(model_path, target, task_type='classification', is_dl=False, sample_size=None):
+    target_name = os.path.splitext(os.path.basename(model_path))[0]
     print(f"🔍 Evaluating: {model_path}")
     model = load_model(model_path, is_dl)
 
     df = load_data()
 
     # 🔐 Load features used during training
-    filename = os.path.basename(model_path).replace(".pkl", "").replace(".h5", "")
-    feature_file = os.path.join(MODEL_DIR, f"{filename}_features.txt")
+    #filename = os.path.basename(model_path).replace(".pkl", "").replace(".h5", "")
+    feature_file = os.path.join(MODEL_DIR, f"{target_name}_features.txt")
 
     if not os.path.exists(feature_file):
         raise FileNotFoundError(f"⚠️ Feature file not found for {filename}")
@@ -119,7 +130,7 @@ def evaluate_pipeline(model_path, target, task_type='classification', is_dl=Fals
     # Restrict to selected features
     df = df[selected_features + [target]].dropna()
 
-    # 🔁 Optional sampling
+    # Optional sampling
     if sample_size and sample_size < len(df):
         df = df.sample(n=sample_size, random_state=42)
 

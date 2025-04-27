@@ -40,7 +40,8 @@ def main():
         st.success("✅ Evaluation complete!")
 
         # Show Plots
-        plot_base = f"plots/{target}"
+        target_name = os.path.splitext(os.path.basename(model_choice))[0]
+        plot_base = f"plots/{target_name}"
         if task_type == "classification":
             st.image(f"{plot_base}_conf_matrix_eval.png", caption="Confusion Matrix")
             st.image(f"{plot_base}_roc_eval.png", caption="ROC Curve")
@@ -51,7 +52,12 @@ def main():
     if os.path.exists("evaluation_metrics.csv"):
         st.markdown("### 📋 Evaluation Summary")
         metrics_df = pd.read_csv("evaluation_metrics.csv")
-        st.dataframe(metrics_df)
+
+        # Filter current model’s metrics
+        model_id = os.path.basename(model_choice).replace(".pkl", "").replace(".h5", "")
+        filtered = metrics_df[metrics_df["model_file"].str.contains(target_name)]
+        st.dataframe(filtered)
+        #st.dataframe(metrics_df)
 
         csv = metrics_df.to_csv(index=False).encode("utf-8")
         st.download_button("📥 Download Metrics CSV", csv, "evaluation_metrics.csv", "text/csv")
