@@ -282,10 +282,9 @@ def main():
         st.subheader("🔎 Auto-Generated Features Ready for Prediction:")
         st.dataframe(pd.DataFrame([prediction_input]))
         st.divider()
-        #st.subheader("🔮 Predict Now!")
 
         df = pd.DataFrame([prediction_input])
-        #st.dataframe(df)
+       
         scaler = StandardScaler()
         X_scaled = StandardScaler().fit_transform(df)
 
