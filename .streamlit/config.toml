@@ -8,3 +8,8 @@ maxMessageSize = 200
 
 # Disable the folder blacklist in Streamlit
 #st.set_option('server.folderWatchBlacklist', [])
+
+    # https://github.com/streamlit/streamlit/issues/5178
+    fileWatcherType="poll"
+    # https://discuss.streamlit.io/t/no-such-file-or-directory-on-initializing-file-attempt/56431
+    folderWatchBlacklist=[]
