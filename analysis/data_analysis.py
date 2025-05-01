@@ -8,7 +8,7 @@ st.set_page_config(page_title='EKEDC Meter Dashboard', layout='wide')
 # ---------------------- LOAD DATA ----------------------
 @st.cache_data
 def load_data():
-    df = pd.read_csv("daily_meter_summary.csv", parse_dates=['date_'])
+    df = pd.read_csv("data/daily_meter_summary.csv", parse_dates=['date_'])
     return df
 
 # Add this at the top
