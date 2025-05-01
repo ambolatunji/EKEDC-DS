@@ -4,8 +4,6 @@ import numpy as np
 import plotly.express as px
 
 st.set_page_config(page_title='EKEDC Meter Dashboard', layout='wide')
-# Disable the folder blacklist in Streamlit
-st.set_option('server.folderWatchBlacklist', [])
 
 # ---------------------- LOAD DATA ----------------------
 @st.cache_data
