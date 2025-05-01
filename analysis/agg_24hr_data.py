@@ -1,7 +1,7 @@
 import pandas as pd
 from tqdm import tqdm
 
-def aggregate_24hr(input_path='../engineered_meter_data.csv', output_path='../daily_meter_summary.csv', chunk_size=100000):
+def aggregate_24hr(input_path='engineered_meter_data.csv', output_path='daily_meter_summary.csv', chunk_size=100000):
     print("🔄 Reading and aggregating in chunks...")
 
     chunk_iter = pd.read_csv(input_path, chunksize=chunk_size, parse_dates=['timestamp'])
