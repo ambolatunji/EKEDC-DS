@@ -44,7 +44,7 @@ os.makedirs(data_dir, exist_ok=True)  # Create the directory if it doesn't exist
 df = load_data()
 
 # Add file upload functionality
-uploaded_file = st.sidebar.file_uploader("Upload Daily Meter Summary CSV", type=["csv"])
+uploaded_file = st.file_uploader("Upload Daily Meter Summary CSV", type=["csv"])
 if uploaded_file is not None:
     df = load_data(uploaded_file) # Overwrite df with the newly uploaded file
 
@@ -113,7 +113,7 @@ with kpi2:
     st.error(format_metric(filtered_df['revenue_loss_sum'].sum()))
 
 with kpi3:
-    st.markdown("### ⚡ Energy Loss (kWh)")
+    st.markdown("### ⚡ Energy Loss-kWh")
     st.warning(format_metric(filtered_df['energy_loss_kwh_sum'].sum()))
 
 with kpi4:
