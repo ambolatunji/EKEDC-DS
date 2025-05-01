@@ -7,4 +7,4 @@ maxUploadSize = 300
 maxMessageSize = 200
 
 # Disable the folder blacklist in Streamlit
-st.set_option('server.folderWatchBlacklist', [])
+#st.set_option('server.folderWatchBlacklist', [])
