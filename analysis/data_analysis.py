@@ -2,19 +2,61 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import os
 
 st.set_page_config(page_title='EKEDC Meter Dashboard', layout='wide')
 
 # ---------------------- LOAD DATA ----------------------
 @st.cache_data
-def load_data():
-    df = pd.read_csv("data/daily_meter_summary.csv", parse_dates=['date_'])
-    return df
+def load_data(uploaded_file=None):
+    """
+    Loads the data from a CSV file.
+    - If uploaded_file is provided, loads from the uploaded file.
+    - Otherwise, tries to load from the 'data/daily_meter_summary.csv'.
+    - If the file is not found, returns None.
+    """
+    data_dir = "data"
+    file_path = os.path.join(data_dir, "daily_meter_summary.csv")
 
-# Add this at the top
+    if uploaded_file:
+        try:
+            df = pd.read_csv(uploaded_file, parse_dates=['date_'])
+            return df
+        except Exception as e:
+            st.error(f"Error reading uploaded CSV file: {e}")
+            return None
+    elif os.path.exists(file_path):
+        try:
+            df = pd.read_csv(file_path, parse_dates=['date_'])
+            return df
+        except Exception as e:
+            st.error(f"Error reading CSV file from 'data' directory: {e}")
+            return None
+    else:
+        return None
+
+# ---------------------- File Upload Section ----------------------
+# Ensure the data directory exists
+data_dir = "data"
+os.makedirs(data_dir, exist_ok=True)  # Create the directory if it doesn't exist
+
+# Attempt to load the data
+df = load_data()
+
+# Add file upload functionality
+uploaded_file = st.sidebar.file_uploader("Upload Daily Meter Summary CSV", type=["csv"])
+if uploaded_file is not None:
+    df = load_data(uploaded_file) # Overwrite df with the newly uploaded file
+
+# Add a reload button
 if st.sidebar.button("🔄 Reload Data"):
     st.cache_data.clear()
-df = load_data()
+    df = load_data(uploaded_file)  # Reload the dataframe, use the uploaded file if available.
+
+# Check if the dataframe is empty
+if df is None:
+    st.warning("Please upload the daily meter summary CSV file.")
+    st.stop()  # Stop the app if no data
 
 # ---------------------- FILTER SIDEBAR ----------------------
 st.sidebar.header("🔎 Filter Data")
