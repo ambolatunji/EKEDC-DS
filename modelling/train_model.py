@@ -337,7 +337,7 @@ def train_pipeline(target, task_type='classification', model_category='ml', algo
         log_fn("📊 Evaluating model...")
         if task_type == 'classification':
             report_str = classification_report(y_test, y_pred)
-            log_fn("Classification Report:\n", report_str)
+            log_fn(f"Classification Report:\n{report_str}")
             acc = accuracy_score(y_test, y_pred)
             score = auc(roc_curve(y_test, y_prob)[0], roc_curve(y_test, y_prob)[1]) if y_prob is not None else acc # Use AUC if available, else Accuracy
             log_fn(f"Score (AUC/Accuracy): {score:.4f}")
