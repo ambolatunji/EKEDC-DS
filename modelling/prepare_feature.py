@@ -2,7 +2,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-def load_data(path="daily_meter_summary.csv"):
+def load_data(path="modelling/daily_meter_summary.csv"):
     """
     Loads the final feature-engineered and aggregated dataset.
     Assumes this file is the end product of your preprocessing pipeline.
