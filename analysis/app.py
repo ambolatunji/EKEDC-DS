@@ -51,7 +51,7 @@ if st.sidebar.button("🔄 Reload Data"):
 if df is None:
     st.warning("Please upload the daily meter summary CSV file.")
     # Add a download button
-    github_link = "https://github.com/ambolatunji/EKEDC-DS/raw/1d7c12073f6064801592446a12fd82cad18fa2fa/analysis/data/daily_meter_summary.csv"  # Corrected link
+    github_link = "https://github.com/ambolatunji/EKEDC-DS/raw/1d7c12073f6064801592446a12fd82cad18fa2fa/data/daily_meter_summary.csv"  # Corrected link
     st.markdown(f"**Download the file from [here](%s)** and upload it." % github_link, unsafe_allow_html=True)
     st.stop()  # Stop the app if no data
 
