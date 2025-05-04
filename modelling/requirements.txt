@@ -13,4 +13,4 @@ scipy
 seaborn
 statsmodels
 xgboost
-
+streamlit_option_menu
