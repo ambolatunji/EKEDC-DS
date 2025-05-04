@@ -9,7 +9,7 @@ st.set_page_config(page_title='EKEDC Meter Dashboard', layout='wide')
 # ---------------------- LOAD DATA ----------------------
 @st.cache_data
 def load_data(uploaded_file=None):
-    data_dir = "data"
+    data_dir = "analysis/data"
     file_path = os.path.join(data_dir, "daily_meter_summary.csv") #data_dir,)
 
     if uploaded_file:
