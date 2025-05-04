@@ -7,10 +7,10 @@ import gc
 from datetime import datetime, timedelta
 
 # Config
-NUM_METERS = 20
+NUM_METERS = 2000
 NUM_DAYS = 30
 READINGS_PER_DAY = 24
-CHUNK_SIZE = 5
+CHUNK_SIZE = 500
 
 bands = {
     "A": 209,

@@ -5,7 +5,7 @@ import sys
 import gc
 from tqdm import tqdm
 
-def feature_engineering(input_path='meter_data.csv', output_path='engineered_meter_data.csv', chunk_size=5):
+def feature_engineering(input_path='meter_data.csv', output_path='engineered_meter_data.csv', chunk_size=500):
     print(f"\nProcessing {input_path} in chunks...")
     
     # Get total rows for progress bar

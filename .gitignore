@@ -10,9 +10,10 @@ ekedp/*
 *.rar binary
 
 
-#*.csv
+*.csv
 *.cypython
 modelling/__pycache__/*
 *.__pycache__
 modelling/models/*
 modelling/plots/*
+*.md
