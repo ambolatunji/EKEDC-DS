@@ -15,8 +15,8 @@ def load_data(uploaded_file=None):
     - Otherwise, tries to load from the 'data/daily_meter_summary.csv'.
     - If the file is not found, returns None.
     """
-    data_dir = "data"
-    file_path = os.path.join(data_dir, "daily_meter_summary.csv")
+    #data_dir = "data"
+    file_path = os.path.join("daily_meter_summary.csv") #data_dir,)
 
     if uploaded_file:
         try:
@@ -37,8 +37,8 @@ def load_data(uploaded_file=None):
 
 # ---------------------- File Upload Section ----------------------
 # Ensure the data directory exists
-data_dir = "data"
-os.makedirs(data_dir, exist_ok=True)  # Create the directory if it doesn't exist
+#data_dir = "data"
+#os.makedirs(data_dir, exist_ok=True)  # Create the directory if it doesn't exist
 
 # Attempt to load the data
 df = load_data()
