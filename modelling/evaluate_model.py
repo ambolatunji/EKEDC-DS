@@ -25,9 +25,41 @@ def parse_model_filename(filename):
     parts = filename.split("_")
     known_algos = ["logistic", "randomforest", "xgboost", "ensemble", "mlp", "linear"]
     known_types = ["ml", "dl"]
-    model_type = parts[-1] if parts[-1] in known_types else "ml"
-    algorithm = parts[-2] if parts[-2] in known_algos else "unknown"
-    target = "_".join(parts[:-3])
+    # Extract date_timestamp from the end if present (format: YYYYMMDD_HHMMSS)
+    timestamp = None
+    if len(parts) >= 2 and len(parts[-1]) == 6 and parts[-2].isdigit() and len(parts[-2]) == 8:
+        timestamp = f"{parts[-2]}_{parts[-1]}"
+        parts = parts[:-2]
+    
+    # Check for tuned flag
+    tuned_flag = None
+    if "tuned" in parts:
+        tuned_idx = parts.index("tuned")
+        tuned_flag = parts[tuned_idx]
+        parts.pop(tuned_idx)
+    
+    # Extract model type and algorithm
+    model_type = None
+    algorithm = None
+    
+    for known_type in known_types:
+        if known_type in parts:
+            model_type = known_type
+            type_idx = parts.index(model_type)
+            parts.pop(type_idx)
+            break
+    
+    for known_algo in known_algos:
+        if known_algo in parts:
+            algorithm = known_algo
+            algo_idx = parts.index(algorithm)
+            parts.pop(algo_idx)
+            break
+    
+    # The remaining parts make up the target
+    target = "_".join(parts)
+    
+    return target, algorithm, model_type
     return target, algorithm, model_type
 
 def load_model(model_path, is_dl=False):
@@ -111,30 +143,55 @@ def evaluate_regression(model, X_test, y_test, target_name, model_path, is_dl=Fa
     plt.close()
 
 def evaluate_pipeline(model_path, target, task_type='classification', is_dl=False, sample_size=None):
-    target_name = os.path.splitext(os.path.basename(model_path))[0]
+    model_basename = os.path.splitext(os.path.basename(model_path))[0]
     print(f"🔍 Evaluating: {model_path}")
+    print(f"Target: {target}, Task Type: {task_type}")
     model = load_model(model_path, is_dl)
 
     df = load_data()
 
+    # Check if target exists in the dataframe
+    if target not in df.columns:
+        # Try to find the correct target based on model naming conventions
+        # Common naming patterns from train_model.py: "tamper_detected", "fault_detected", etc.
+        standard_targets = ["tamper_detected", "fault_detected", "energy_loss_kwh_sum", 
+                          "band_compliance_max", "customer_risk_score_mean"]
+        for std_target in standard_targets:
+            if std_target in model_basename:
+                target = std_target
+                print(f"Target adjusted to: {target}")
+                break
+    
+    if target not in df.columns:
+        raise ValueError(f"Target column '{target}' not found in dataset. Available columns: {df.columns.tolist()}")
+
     # 🔐 Load features used during training
-    #filename = os.path.basename(model_path).replace(".pkl", "").replace(".h5", "")
-    feature_file = os.path.join(MODEL_DIR, f"{target_name}_features.txt")
+    feature_file = os.path.join(MODEL_DIR, f"{model_basename}_features.txt")
 
     if not os.path.exists(feature_file):
-        raise FileNotFoundError(f"⚠️ Feature file not found for {filename}")
+        raise FileNotFoundError(f"⚠️ Feature file not found for {model_basename}")
 
     with open(feature_file, "r") as f:
         selected_features = [line.strip() for line in f.readlines()]
 
+    print(f"Loaded {len(selected_features)} features from {feature_file}")
+    
+    # Verify all selected features exist in the DataFrame
+    missing_features = [f for f in selected_features if f not in df.columns]
+    if missing_features:
+        raise ValueError(f"Features missing from dataset: {missing_features}")
+
     # Restrict to selected features
     df = df[selected_features + [target]].dropna()
+    print(f"Dataset shape after filtering: {df.shape}")
 
     # Optional sampling
     if sample_size and sample_size < len(df):
         df = df.sample(n=sample_size, random_state=42)
+        print(f"Sampled {sample_size} rows from dataset")
 
     X_train, X_test, y_train, y_test, _ = prepare_data(df, target, task_type, selected_features=selected_features)
+    print(f"Test data shape: X_test={X_test.shape}, y_test={y_test.shape}")
 
     if task_type == 'classification':
         evaluate_classification(model, X_test, y_test, target, model_path, is_dl)
@@ -143,11 +200,29 @@ def evaluate_pipeline(model_path, target, task_type='classification', is_dl=Fals
 
 def auto_discover_models():
     models = glob(os.path.join(MODEL_DIR, "*"))
-    for model_path in models:
-        is_dl = model_path.endswith(".h5")
-        target, _, _ = parse_model_filename(model_path)
-        task = "classification" if any(x in target for x in ["tamper", "fault", "band"]) else "regression"
-        evaluate_pipeline(model_path, target, task_type=task, is_dl=is_dl)
+    # Filter out feature files and other non-model files
+    model_files = [m for m in models if m.endswith(".pkl") or m.endswith(".h5")]
+    
+    print(f"Discovered {len(model_files)} models to evaluate")
+    
+    for model_path in model_files:
+        try:
+            is_dl = model_path.endswith(".h5")
+            target, algorithm, model_type = parse_model_filename(model_path)
+            
+            # Determine task type based on common naming patterns
+            if any(x in target for x in ["tamper", "fault", "band"]):
+                task = "classification"
+            else:
+                task = "regression"
+                
+            print(f"Auto-evaluating: {model_path} (target: {target}, task: {task})")
+            evaluate_pipeline(model_path, target, task_type=task, is_dl=is_dl)
+            
+        except Exception as e:
+            print(f"❌ Error evaluating {model_path}: {e}")
+            import traceback
+            traceback.print_exc()
 
     pd.DataFrame(metrics_log).to_csv(METRICS_FILE, index=False)
     print(f"📦 All evaluations saved to {METRICS_FILE}")
