@@ -55,7 +55,7 @@ def main():
 
         # Filter current model’s metrics
         model_id = os.path.basename(model_choice).replace(".pkl", "").replace(".h5", "")
-        filtered = metrics_df[metrics_df["model_file"].str.contains(target_name)]
+        filtered = metrics_df[metrics_df["model_file"].str.contains(os.path.basename(model_choice))]
         st.dataframe(filtered)
         #st.dataframe(metrics_df)
 
